@@ -24,7 +24,7 @@ from collections import deque
 from keras import backend
 import tensorflow as tf
 from tensorflow.compat.v1 import InteractiveSession
-config = tf.ConfigProto()
+config = tf.compat.v1.ConfigProto() #tf.ConfigProto()
 config.gpu_options.allow_growth = True
 session = InteractiveSession(config=config)
 
