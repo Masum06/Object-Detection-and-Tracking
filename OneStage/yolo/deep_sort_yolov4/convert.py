@@ -5,6 +5,7 @@ import numpy as np
 from keras import backend as K
 from keras.models import load_model
 from keras.layers import Input
+import tensorflow as tf
 
 from yolo4.model import yolo_eval, yolo4_body
 from yolo4.utils import letterbox_image
@@ -48,10 +49,10 @@ class Yolo4(object):
             map(lambda x: (int(x[0] * 255), int(x[1] * 255), int(x[2] * 255)),
                 self.colors))
 
-        self.sess = K.get_session()
+        self.sess = tf.compat.v1.Session()
 
         # Load model, or construct model and load weights.
-        self.yolo4_model = yolo4_body(Input(shape=(608, 608, 3)), num_anchors//3, num_classes)
+        self.yolo4_model = yolo4_body(Input(shape=(416, 416, 3)), num_anchors//3, num_classes)
 
         # Read and convert darknet weight
         print('Loading weights.')
@@ -68,10 +69,16 @@ class Yolo4(object):
         bns_to_load = []
         for i in range(len(self.yolo4_model.layers)):
             layer_name = self.yolo4_model.layers[i].name
-            if layer_name.startswith('conv2d_'):
-                convs_to_load.append((int(layer_name[7:]), i))
-            if layer_name.startswith('batch_normalization_'):
-                bns_to_load.append((int(layer_name[20:]), i))
+            if layer_name.startswith('conv2d'):
+                if layer_name == 'conv2d':
+                    convs_to_load.append((0, i))
+                else:
+                    convs_to_load.append((int(layer_name[7:]), i))
+            if layer_name.startswith('batch_normalization'):
+                if layer_name == 'batch_normalization':
+                    bns_to_load.append((0, i))
+                else:
+                    bns_to_load.append((int(layer_name[20:]), i))
 
         convs_sorted = sorted(convs_to_load, key=itemgetter(0))
         bns_sorted = sorted(bns_to_load, key=itemgetter(0))
@@ -160,15 +167,13 @@ class Yolo4(object):
         self.sess.close()
 
 if __name__ == '__main__':
-    model_path = 'yolo4_weight.h5'
+    model_path = 'model_data/yolo4_weight.h5'
     anchors_path = 'model_data/yolo_anchors.txt'
     classes_path = 'model_data/coco_classes.txt'
     weights_path = 'model_data/yolov4.weights'
 
     score = 0.5
     iou = 0.5
-
-    model_image_size = (608, 608)
 
     yolo4_model = Yolo4(score, iou, anchors_path, classes_path, model_path, weights_path)
 
